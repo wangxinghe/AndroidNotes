@@ -1,0 +1,30 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+skinparam monochrome true
+skinparam shadowing false
+autonumber
+title 获取ServiceManagerProxy逻辑
+participant ServiceManagerNative
+participant BinderInternal
+participant BinderProxy
+participant android_util_Binder
+participant BpBinder
+participant ProcessState
+participant IPCThreadState
+
+BinderInternal -> android_util_Binder: getContextObject
+android_util_Binder -> ProcessState: android_os_BinderInternal_getContextObject
+ProcessState -> ProcessState: self
+ProcessState --> ProcessState: open_driver
+ProcessState --> ProcessState: mmap
+ProcessState -> ProcessState: getContextObject
+ProcessState -> ProcessState: getStrongProxyForHandle(0)
+ProcessState -> IPCThreadState: lookupHandleLocked(0)
+IPCThreadState -> IPCThreadState: self
+IPCThreadState -> IPCThreadState: transact
+android_util_Binder <- BpBinder: BpBinder.create
+android_util_Binder -> android_util_Binder: javaObjectForIBinder
+android_util_Binder -> BinderProxy: JNI调用 BinderProxy.getInstance\n(BinderProxyNativeData*, BpBinder)
+ServiceManagerNative -> ServiceManagerNative: asInterface(BinderProxy)
+ServiceManagerNative -> ServiceManagerNative: new ServiceManagerProxy(BinderProxy)
+@enduml

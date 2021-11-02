@@ -1,0 +1,28 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+skinparam monochrome true
+skinparam shadowing false
+autonumber
+title service_manager流程
+
+service_manager.c -> service_manager.c: main
+service_manager.c -> service_manager_binder.c: binder_open("/dev/binder")
+service_manager.c -> service_manager_binder.c: binder_become_context_manager
+service_manager.c -> service_manager_binder.c: binder_loop (while循环)
+service_manager_binder.c -> service_manager_binder.c: binder_write(BC_ENTER_LOOPER)
+service_manager_binder.c -> service_manager_binder.c: ioctl(BINDER_WRITE_READ)
+service_manager_binder.c -> service_manager_binder.c: binder_parse(svcmgr_handler)
+
+note over service_manager_binder.c: cmd=BR_TRANSACTION
+service_manager.c -> service_manager.c: svcmgr_handler
+service_manager.c --> service_manager.c: do_find_service\n(SVC_MGR_GET_SERVICE, SVC_MGR_CHECK_SERVICE)
+service_manager.c --> service_manager.c: do_add_service\n(SVC_MGR_ADD_SERVICE)
+service_manager.c --> service_manager.c: svc_can_list\n(SVC_MGR_LIST_SERVICES)
+service_manager_binder.c -> service_manager_binder.c: binder_free_buffer(flags异步)
+note right: cmd=BC_FREE_BUFFER
+service_manager_binder.c -> service_manager_binder.c: binder_send_reply(flags同步)
+note right: cmd=BC_FREE_BUFFER\n & BC_REPLY
+service_manager_binder.c -> service_manager_binder.c: binder_write
+
+service_manager_binder.c -> binder.c: ioctl(bs->fd, BINDER_WRITE_READ, &binder_write_read)
+@enduml

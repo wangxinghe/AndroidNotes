@@ -1,0 +1,49 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+skinparam monochrome true
+skinparam shadowing false
+autonumber
+
+BinderProxy -> BinderProxy: transact
+BinderProxy -> android_util_Binder: transactNative
+android_util_Binder -> BpBinder: android_os_BinderProxy_transact
+BpBinder -> IPCThreadState: transact
+IPCThreadState -> IPCThreadState: transact
+IPCThreadState -> IPCThreadState: writeTransactionData\n(BC_TRANSACTION, binder_transaction_data)\ncode=ADD_SERVICE_TRANSACTION
+IPCThreadState -> IPCThreadState: waitForResponse
+note over IPCThreadState: while循环
+IPCThreadState -> IPCThreadState: talkWithDriver
+IPCThreadState -> binder.c: ioctl("/dev/binder", BINDER_WRITE_READ, binder_write_read)
+binder.c -> binder.c: binder_ioctl
+note over binder.c: 第1阶段: BC_TRANSACTION\n\n源线程 -> Binder驱动
+binder.c -> binder.c: binder_get_thread
+binder.c -> binder.c: binder_ioctl_write_read
+binder.c -> binder.c: copy_from_user(binder_write_read)\n用户空间 -> 内核空间
+binder.c --> binder.c: binder_thread_write
+note right: if(bwr.write_size>0) \n 1.get_user(cmd) \n 2.copy_from_user(binder_transaction_data) 用户空间 -> 内核空间 \n 3.binder_transaction
+binder.c --> binder.c: binder_transaction
+note right: 1.copy_from_user(binder_transaction_data -> binder_transaction) 用户空间 -> 内核空间 \n 2. for循环 to_flat_binder_object(binder_object_header) -> flat_binder_object \n 3.binder_translate_binder
+binder.c -> binder.c: copy_to_user(binder_write_read)\n内核空间 -> 用户空间
+note over binder.c: 第2阶段: BR_TRANSACTION_COMPLETE\n\nBinder驱动 -> 源线程
+binder.c --> binder.c: binder_thread_read if(bwr.read_size>0)
+binder.c --> binder.c: binder_work.type == BINDER_WORK_TRANSACTION_COMPLETE \n put_user(BR_TRANSACTION_COMPLETE)\n内核空间 -> 用户空间
+note over binder.c: 第3阶段: BR_TRANSACTION\n\nBinder驱动 -> ServiceManager进程
+binder.c -> binder.c: binder_thread_read
+binder.c -> binder.c: binder_work.type == BINDER_WORK_TRANSACTION \n put_user(BR_TRANSACTION)\n内核空间 -> 用户空间
+binder.c -> binder.c: copy_to_user(binder_transaction_data)\n内核空间 -> 用户空间
+
+service_manager_binder.c -> service_manager_binder.c: binder_parse
+service_manager.c -> service_manager.c: svcmgr_handler
+service_manager.c --> service_manager.c: do_find_service\ndo_add_service\nsvc_can_list
+note over service_manager_binder.c: 第4阶段: BC_REPLY\n\nServiceManager进程 -> Binder驱动
+service_manager_binder.c -> service_manager_binder.c: binder_send_reply
+service_manager_binder.c -> service_manager_binder.c: binder_write(BC_FREE_BUFFER, BC_REPLY)
+service_manager_binder.c -> service_manager_binder.c: ioctl(fd, BINDER_WRITE_READ, binder_write_read)
+service_manager_binder.c -> service_manager_binder.c: binder_transaction
+service_manager_binder.c -> service_manager_binder.c: copy_from_user(binder_transaction_data)\nBC_REPLY
+note over binder.c: 第5阶段: BR_TRANSACTION_COMPLETE\n\nBinder驱动 -> ServiceManager进程
+service_manager_binder.c -> service_manager_binder.c: binder_parse
+note over binder.c: 第6阶段: BR_REPLY\n\nBinder驱动 -> 源线程
+binder.c -> binder.c: binder_thread_read
+binder.c -> binder.c: put_user(BR_REPLY)
+@enduml

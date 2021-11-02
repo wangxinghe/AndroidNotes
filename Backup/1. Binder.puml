@@ -1,0 +1,39 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+skinparam monochrome true
+skinparam shadowing false
+autonumber
+title Binder流程
+
+BinderProxy -> BinderProxy: transact
+BinderProxy -> android_util_Binder: transactNative
+android_util_Binder -> BpBinder: android_os_BinderProxy_transact
+BpBinder -> IPCThreadState: transact
+IPCThreadState -> IPCThreadState: transact
+IPCThreadState -> IPCThreadState: writeTransactionData\n(BC_TRANSACTION, binder_transaction_data)\ncode=ADD_SERVICE_TRANSACTION
+IPCThreadState -> IPCThreadState: waitForResponse
+note over IPCThreadState: while循环
+IPCThreadState -> IPCThreadState: talkWithDriver
+IPCThreadState -> binder.c: ioctl(fd, BINDER_WRITE_READ, &binder_write_read)
+
+binder.c -> binder.c: binder_ioctl_write_read
+
+note over binder.c: binder_thread_read
+binder.c -> binder.c: binder_thread_read
+binder.c -> binder.c: binder_transaction
+
+note over binder.c: binder_thread_write
+binder.c -> binder.c: binder_thread_write
+binder.c -> binder.c: binder_transaction
+
+note over binder.c: 用户空间 -> 内核空间
+binder.c -> binder.c: get_user(cmd)
+binder.c -> binder.c: copy_from_user(binder_write_read)
+
+note over binder.c: 内核空间 -> 用户空间
+binder.c -> binder.c: put_user(cmd)
+binder.c -> binder.c: copy_to_user(binder_write_read)
+
+binder.c <-> service_manager:
+service_manager -> service_manager: 守护进程: BR_TRANSACTION & BC_FREE_BUFFER & BC_REPLY
+@enduml

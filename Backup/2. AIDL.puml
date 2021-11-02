@@ -1,0 +1,28 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+skinparam monochrome true
+skinparam shadowing false
+autonumber
+title AIDL流程
+participant IActivityManager.Stub
+
+IActivityManager.Stub.Proxy -> BinderProxy: startService
+BinderProxy -> BinderProxy: transact
+BinderProxy -> android_util_Binder: transactNative
+android_util_Binder -> BpBinder: android_os_BinderProxy_transact
+BpBinder -> IPCThreadState: transact
+IPCThreadState -> IPCThreadState: transact
+IPCThreadState -> IPCThreadState: writeTransactionData
+IPCThreadState -> IPCThreadState: waitForResponse
+
+note over IPCThreadState: cmd=BR_TRANSACTION
+IPCThreadState -> android_util_Binder: executeCommand
+android_util_Binder -> android_util_Binder: JavaBBinder::transact
+android_util_Binder -> android_util_Binder: JavaBBinder::onTransact
+android_util_Binder -> IActivityManager.Stub: JNI调用 Binder.execTransact
+IActivityManager.Stub -> IActivityManager.Stub: execTransactInternal
+IActivityManager.Stub -> IActivityManager.Stub: onTransact
+
+note over IActivityManager.Stub: code=TRANSACTION_startService
+IActivityManager.Stub -> IActivityManager.Stub: startService
+@enduml

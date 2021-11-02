@@ -1,0 +1,19 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+skinparam monochrome true
+skinparam shadowing false
+title startService流程
+autonumber
+
+ContextImpl -> ContextImpl: startService
+ContextImpl -> ContextImpl: startServiceCommon
+
+ContextImpl -> ServiceManagerProxy: getIServiceManager -- Binder过程
+ServiceManagerProxy -> IActivityManager.Stub.Proxy: getService(name) -- Binder过程
+ContextImpl --> IActivityManager.Stub.Proxy: ActivityManager.getService()
+
+IActivityManager.Stub.Proxy -> ActivityManagerService: AIDL机制 (IActivityManager.aidl)
+ActivityManagerService -> ActiveServices: startService
+ActiveServices -> ActiveServices: startServiceLocked
+@enduml
